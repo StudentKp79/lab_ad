@@ -3,23 +3,24 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import glob
 
-
 def create_data_frame(folder_path):
     csv_files = glob.glob(folder_path + "/*.csv")
-
     headers = ['Year', 'Week', 'SMN', 'SMT', 'VCI', 'TCI', 'VHI', 'empty']
     frames = []
 
     for file in csv_files:
-        region_id = int(file.split('__')[1])
-        df = pd.read_csv(file, header=1, names=headers)
-        df.at[0, 'Year'] = df.at[0, 'Year'][9:]
-        df = df.drop(df.index[-1])
-        df = df.drop(df.loc[df['VHI'] == -1].index)
-        df = df.drop('empty', axis=1)
-        df.insert(0, 'region_id', region_id, True)
-        df['Week'] = df['Week'].astype(int)
-        frames.append(df)
+        try:
+            region_id = int(file.split('__')[1])
+            df = pd.read_csv(file, header=1, names=headers)
+            df.at[0, 'Year'] = df.at[0, 'Year'][9:]
+            df = df.drop(df.index[-1])
+            df = df[df['VHI'] != -1]
+            df = df.drop('empty', axis=1)
+            df.insert(0, 'region_id', region_id, True)
+            df['Week'] = df['Week'].astype(int)
+            frames.append(df)
+        except Exception as e:
+            print(f"Error processing file {file}: {e}")
     result = pd.concat(frames).drop_duplicates().reset_index(drop=True)
     result = result.loc[(result.region_id != 12) & (result.region_id != 20)]
     result = result.replace({'region_id': {1: 22, 2: 24, 3: 23, 4: 25, 5: 3, 6: 4, 7: 8, 8: 19, 9: 20, 10: 21,
@@ -27,8 +28,7 @@ def create_data_frame(folder_path):
                                            22: 18, 23: 6, 24: 1, 25: 2, 26: 6, 27: 5}})
     return result
 
-
-df = create_data_frame('../lab_2/download')
+df = create_data_frame('download')
 
 reg_id_name = {
     1: 'Вінницька', 2: 'Волинська', 3: 'Дніпропетровська', 4: 'Донецька', 5: 'Житомирська',
@@ -38,85 +38,100 @@ reg_id_name = {
     21: 'Хмельницька', 22: 'Черкаська', 23: 'Чернівецька', 24: 'Чернігівська', 25: 'Республіка Крим'
 }
 
-
-class SimpleApp(server.App):
-    title = "AD lab 3 Luniaka"
+class DataApp(server.App):
+    title = "Аналіз Даних Агрономії"
 
     inputs = [
         {
             "type": "dropdown",
-            "label": "Parameter",
-            "options": [{"label": "VCI", "value": "VCI"},
-                        {"label": "TCI", "value": "TCI"},
-                        {"label": "VHI", "value": "VHI"}],
+            "label": "Виберіть Параметр",
+            "options": [{"label": "Вегетаційний індекс (VCI)", "value": "VCI"},
+                        {"label": "Тепловий індекс (TCI)", "value": "TCI"},
+                        {"label": "Індекс здоров'я рослин (VHI)", "value": "VHI"}],
             "key": "parameter",
             "action_id": "update_data"
         },
         {
             "type": "dropdown",
-            "label": "Region",
+            "label": "Виберіть Регіон",
             "options": [{"label": reg_id_name[region_id], "value": region_id} for region_id in
                         sorted(df['region_id'].unique())],
             "key": "region",
             "action_id": "update_data"
         },
         {
-            "type": "text",
-            "key": "years_interval",
-            "label": "Years Interval",
-            "value": "1982-2024"
+            "type": "dropdown",
+            "key": "year_start",
+            "label": "Початковий Рік",
+            "options": [{"label": str(year), "value": str(year)} for year in sorted(df['Year'].astype(int).unique())],
+            "action_id": "update_data"
+        },
+        {
+            "type": "dropdown",
+            "key": "year_end",
+            "label": "Кінцевий Рік",
+            "options": [{"label": str(year), "value": str(year)} for year in sorted(df['Year'].astype(int).unique())],
+            "action_id": "update_data"
         },
         {
             "type": "text",
             "key": "weeks_interval",
-            "label": "Weeks Interval (e.g., 1-3)",
+            "label": "Інтервал Тижнів (наприклад, 1-3)",
             "value": "1-3"
         }
     ]
 
-    controls = [{"type": "button", "label": "Update", "id": "update_data"}]
+    controls = [{"type": "button", "label": "Оновити Дані", "id": "update_data"}]
 
-    tabs = ["Table", "Plot"]
+    tabs = ["Таблиця", "Графік"]
 
-    outputs = [{"type": "table", "id": "table", "control_id": "update_data", "tab": "Table", "on_page_load": True},
-               {"type": "plot", "id": "plot", "control_id": "update_data", "tab": "Plot", "on_page_load": True}, ]
+    outputs = [
+        {"type": "table", "id": "table", "control_id": "update_data", "tab": "Таблиця", "on_page_load": True},
+        {"type": "plot", "id": "plot", "control_id": "update_data", "tab": "Графік", "on_page_load": True}
+    ]
 
     def getData(self, params):
         parameter = params["parameter"]
-        print(parameter)
         region_id = int(params["region"])
-        years = params["years_interval"].split('-')
+        year_start = int(params["year_start"])
+        year_end = int(params["year_end"])
         weeks_interval = params["weeks_interval"].split('-')
 
-        df_year = df[(df['Year'].astype(int).between(int(years[0]), int(years[1]))) &
-                     (df['Week'].between(int(weeks_interval[0]), int(weeks_interval[1]))) &
-                     (df['region_id'] == region_id)][['Week', parameter]].set_index('Week')
+        df_filtered = df[(df['Year'].astype(int).between(year_start, year_end)) &
+                         (df['Week'].between(int(weeks_interval[0]), int(weeks_interval[1]))) &
+                         (df['region_id'] == region_id)][['Year', 'Week', parameter]]
 
-        return df_year
+        return df_filtered
 
     def getPlot(self, params):
-        fig, ax = plt.subplots(figsize=(16, 8))
-        fig.tight_layout(pad=4)
-
         parameter = params["parameter"]
         region_id = int(params["region"])
+        year_start = int(params["year_start"])
+        year_end = int(params["year_end"])
         weeks_interval = params["weeks_interval"].split('-')
-        years = params["years_interval"].split('-')
 
-        legend_years = []
-        for year in range(int(years[0]), int(years[1]) + 1):
-            df_year = df[(df['Year'] == str(year)) &
+        df_filtered = df[(df['Year'].astype(int).between(year_start, year_end)) &
                          (df['Week'].between(int(weeks_interval[0]), int(weeks_interval[1]))) &
-                         (df['region_id'] == region_id)][['Week', parameter]].set_index('Week')
-            df_year.plot(ax=ax, label=str(year), grid=True)
-            legend_years.append(year)
+                         (df['region_id'] == region_id)][['Year', 'Week', parameter]]
 
-        ax.set_xlabel("Weeks")
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Додавання кольорів для кожного року
+        years = df_filtered['Year'].unique()
+        colors = plt.cm.get_cmap('tab20', len(years))
+
+        for i, year in enumerate(years):
+            df_year = df_filtered[df_filtered['Year'] == year]
+            ax.plot(df_year['Week'], df_year[parameter], label=str(year), color=colors(i))
+
+        ax.set_title(f"Графік {parameter} для {reg_id_name[region_id]}")
+        ax.set_xlabel("Тижні")
         ax.set_ylabel(parameter)
-        ax.legend(legend_years, title='Year', bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.legend(title='Рік')
 
         return fig
 
-
-app = SimpleApp()
+# Запуск додатку
+app = DataApp()
 app.launch()
+

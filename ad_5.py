@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, CheckButtons
 import numpy as np
-
 from scipy.signal import butter, filtfilt
 
 def harmonic(t, amplitude, frequency, phase):
@@ -16,10 +15,10 @@ def harmonic_with_noise(t, amplitude, frequency, phase=0, noise_mean=0, noise_co
         return harmonic_signal + noise
     elif show_noise:
         global noise_g
-        noise_g =  create_noise(t, noise_mean, noise_covariance)
+        noise_g = create_noise(t, noise_mean, noise_covariance)
         return harmonic_signal + noise_g
     else:
-        return
+        return harmonic_signal
 
 def butter_lowpass(cutoff, fs, order=5):
     nyq = 0.5 * fs
@@ -43,39 +42,39 @@ t = np.linspace(0, 10, 1000)
 sampling_frequency = 1 / (t[1] - t[0])
 
 fig, ax = plt.subplots()
-plt.subplots_adjust(left=0.12, bottom=0.45, top=0.95)
+plt.subplots_adjust(left=0.15, bottom=0.4, top=0.9, right=0.85)
 
-harmonic_line, = ax.plot(t, harmonic(t, initial_amplitude, initial_frequency, initial_phase), lw=2, color='black', linestyle=':', label='Harmonic Signal')
+harmonic_line, = ax.plot(t, harmonic(t, initial_amplitude, initial_frequency, initial_phase), lw=2, color='darkred', linestyle='-', label='Harmonic Signal')
 
 with_noise_line, = ax.plot(t, harmonic_with_noise(t, initial_amplitude, frequency=initial_frequency,
                                                   phase=initial_phase, noise_mean=initial_noise_mean, noise_covariance=initial_noise_covariance,
-                                                  show_noise=True, noise=None), lw=2, color='red',label='Noise Signal')
+                                                  show_noise=True, noise=None), lw=2, color='yellow', linestyle='-', label='Noise Signal')
 
 filtered_signal = lowpass_filter(with_noise_line.get_ydata(), 3, sampling_frequency, order=5)
-l_filtered, = ax.plot(t, filtered_signal, lw=2, color='#0f16e6', label='Filtered Signal')
+l_filtered, = ax.plot(t, filtered_signal, lw=2, color='darkblue', linestyle='-', label='Filtered Signal')
 ax.legend()
 
-axcolor = 'lightgoldenrodyellow'
-ax_amplitude = plt.axes([0.12, 0.35, 0.65, 0.03], facecolor=axcolor)
-ax_frequency = plt.axes([0.12, 0.3, 0.65, 0.03], facecolor=axcolor)
-ax_phase = plt.axes([0.12, 0.25, 0.65, 0.03], facecolor=axcolor)
-ax_noise_mean = plt.axes([0.12, 0.2, 0.65, 0.03], facecolor=axcolor)
-ax_noise_covariance = plt.axes([0.12, 0.15, 0.65, 0.03], facecolor=axcolor)
+axcolor = 'lightgrey'
+ax_amplitude = plt.axes([0.15, 0.3, 0.65, 0.03], facecolor=axcolor)
+ax_frequency = plt.axes([0.15, 0.25, 0.65, 0.03], facecolor=axcolor)
+ax_phase = plt.axes([0.15, 0.2, 0.65, 0.03], facecolor=axcolor)
+ax_noise_mean = plt.axes([0.15, 0.15, 0.65, 0.03], facecolor=axcolor)
+ax_noise_covariance = plt.axes([0.15, 0.1, 0.65, 0.03], facecolor=axcolor)
 
-s_amplitude = Slider(ax_amplitude, 'Amplitude', 0.1, 10.0, valinit=initial_amplitude)
-s_frequency = Slider(ax_frequency, 'Frequency', 0.1, 10.0, valinit=initial_frequency)
-s_phase = Slider(ax_phase, 'Phase', 0.0, 2 * np.pi, valinit=initial_phase)
-s_noise_mean = Slider(ax_noise_mean, 'Noise Mean', -1.0, 1.0, valinit=initial_noise_mean)
-s_noise_covariance = Slider(ax_noise_covariance, 'Noise Covariance', 0.0, 1.0, valinit=initial_noise_covariance)
+s_amplitude = Slider(ax_amplitude, 'Amplitude', 0.1, 10.0, valinit=initial_amplitude, valfmt='%1.2f')
+s_frequency = Slider(ax_frequency, 'Frequency', 0.1, 10.0, valinit=initial_frequency, valfmt='%1.2f')
+s_phase = Slider(ax_phase, 'Phase', 0.0, 2 * np.pi, valinit=initial_phase, valfmt='%1.2f')
+s_noise_mean = Slider(ax_noise_mean, 'Noise Mean', -1.0, 1.0, valinit=initial_noise_mean, valfmt='%1.2f')
+s_noise_covariance = Slider(ax_noise_covariance, 'Noise Covariance', 0.0, 1.0, valinit=initial_noise_covariance, valfmt='%1.2f')
 
-ax_cutoff_frequency = plt.axes([0.12, 0.1, 0.65, 0.03], facecolor=axcolor)
-s_cutoff_frequency = Slider(ax_cutoff_frequency, 'Cutoff Frequency', 0.1, 10.0, valinit=3)
+ax_cutoff_frequency = plt.axes([0.15, 0.05, 0.65, 0.03], facecolor=axcolor)
+s_cutoff_frequency = Slider(ax_cutoff_frequency, 'Cutoff Freq', 0.1, 10.0, valinit=3, valfmt='%1.2f')
 
-rax = plt.axes([0.83, 0.35, 0.1, 0.04], facecolor=axcolor)
+rax = plt.axes([0.88, 0.55, 0.1, 0.15], facecolor=axcolor)
 cb_show_noise = CheckButtons(rax, ['Show Noise'], [True])
-button_regenerate_noise = Button(plt.axes([0.83, 0.275, 0.1, 0.04]), 'Regenerate Noise', color=axcolor, hovercolor='0.975')
-button_random_params = Button(plt.axes([0.83, 0.2, 0.1, 0.04]), 'Random Params', color=axcolor, hovercolor='0.975')
-button_reset = Button(plt.axes([0.83, 0.125, 0.1, 0.04]), 'Reset', color=axcolor, hovercolor='0.975')
+button_regenerate_noise = Button(plt.axes([0.88, 0.45, 0.1, 0.05]), 'Regenerate Noise', color='lightgrey', hovercolor='0.975')
+button_random_params = Button(plt.axes([0.88, 0.38, 0.1, 0.05]), 'Random Params', color='lightgrey', hovercolor='0.975')
+button_reset = Button(plt.axes([0.88, 0.31, 0.1, 0.05]), 'Reset', color='lightgrey', hovercolor='0.975')
 
 def update(val):
     amplitude = s_amplitude.val
@@ -88,7 +87,6 @@ def update(val):
     cutoff_frequency = s_cutoff_frequency.val
     filtered_signal = lowpass_filter(with_noise_line.get_ydata(), cutoff_frequency, sampling_frequency)
     l_filtered.set_ydata(filtered_signal)
-
 
     fig.canvas.draw_idle()
 
@@ -114,31 +112,6 @@ def update_noise(val):
     filtered_signal = lowpass_filter(with_noise_line.get_ydata(), cutoff_frequency, sampling_frequency)
     l_filtered.set_ydata(filtered_signal)
     fig.canvas.draw_idle()
-
-
-
-def update_amplitude(val):
-    global noise_g
-    amplitude = s_amplitude.val
-    frequency = s_frequency.val
-    phase = s_phase.val
-    harmonic_line.set_ydata(harmonic(t, amplitude, frequency, phase))
-    with_noise_line.set_ydata(harmonic_with_noise(t, amplitude, frequency, noise=noise_g, show_noise=cb_show_noise.get_status()[0]))
-
-    cutoff_frequency = s_cutoff_frequency.val
-    filtered_signal = lowpass_filter(with_noise_line.get_ydata(), cutoff_frequency, sampling_frequency)
-    l_filtered.set_ydata(filtered_signal)
-    fig.canvas.draw_idle()
-
-    min_y = harmonic_with_noise(t, amplitude, frequency, noise=noise_g, show_noise=cb_show_noise.get_status()[0]).min() - 2
-    max_y = harmonic_with_noise(t, amplitude, frequency, noise=noise_g, show_noise=cb_show_noise.get_status()[0]).max() + 2
-
-    ax.set_ylim(int(min_y), int(max_y))
-
-    fig.canvas.draw_idle()
-
-
-
 
 def regenerate_noise(event):
     with_noise_line.set_ydata(harmonic_with_noise(t, s_amplitude.val, s_frequency.val, s_phase.val, s_noise_mean.val, s_noise_covariance.val, show_noise=True))
@@ -168,15 +141,12 @@ def update_filter(val):
     l_filtered.set_ydata(filtered_signal)
     fig.canvas.draw_idle()
 
-s_amplitude.on_changed(update_amplitude)
+s_amplitude.on_changed(update)
 s_frequency.on_changed(update)
 s_phase.on_changed(update)
 s_noise_mean.on_changed(update_noise)
 s_noise_covariance.on_changed(update_noise)
-
 s_cutoff_frequency.on_changed(update_filter)
-
-
 cb_show_noise.on_clicked(update_chb)
 button_regenerate_noise.on_clicked(regenerate_noise)
 button_random_params.on_clicked(random_params)

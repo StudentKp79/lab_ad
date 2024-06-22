@@ -89,13 +89,16 @@ class DataApp(server.App):
         {"type": "table", "id": "table", "control_id": "update_data", "tab": "Таблиця", "on_page_load": True},
         {"type": "plot", "id": "plot", "control_id": "update_data", "tab": "Графік", "on_page_load": True}
     ]
-
-    def getData(self, params):
+    def get_params(self, params):
         parameter = params["parameter"]
         region_id = int(params["region"])
         year_start = int(params["year_start"])
         year_end = int(params["year_end"])
         weeks_interval = params["weeks_interval"].split('-')
+        return parameter, region_id, year_start, year_end, weeks_interval
+
+    def getData(self, params):
+        parameter, region_id, year_start, year_end, weeks_interval = self.get_params(params)
 
         df_filtered = df[(df['Year'].astype(int).between(year_start, year_end)) &
                          (df['Week'].between(int(weeks_interval[0]), int(weeks_interval[1]))) &
@@ -104,15 +107,8 @@ class DataApp(server.App):
         return df_filtered
 
     def getPlot(self, params):
-        parameter = params["parameter"]
-        region_id = int(params["region"])
-        year_start = int(params["year_start"])
-        year_end = int(params["year_end"])
-        weeks_interval = params["weeks_interval"].split('-')
-
-        df_filtered = df[(df['Year'].astype(int).between(year_start, year_end)) &
-                         (df['Week'].between(int(weeks_interval[0]), int(weeks_interval[1]))) &
-                         (df['region_id'] == region_id)][['Year', 'Week', parameter]]
+        df_filtered = self.getData(params)
+        parameter, region_id, year_start, year_end, weeks_interval = self.get_params(params)
 
         fig, ax = plt.subplots(figsize=(12, 6))
 
